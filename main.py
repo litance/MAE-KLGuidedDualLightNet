@@ -54,7 +54,6 @@ transform = transforms.Compose([
 ])
 
 dataset = ASLDataset(path, transform=transform)
-dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
 
 class MobileNetLSTMSTAM(nn.Module):
@@ -81,6 +80,8 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 num_epochs = 10
+batch_size = 32
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 train_losses = []
 train_accuracies = []
 
@@ -126,6 +127,8 @@ for epoch in range(num_epochs):
           f"Accuracy: {accuracy:.4f} | "
           f"LR: {current_lr:.6f} | "
           f"Time: {elapsed_time:.2f}s\n")
+
+    torch.save(model.state_dict(), "model.pth")
 
 writer.close()
 
