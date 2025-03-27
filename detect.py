@@ -59,7 +59,7 @@ def get_transform():
 def detect_sign_language():
     classes = load_classes_from_file('words.txt')
 
-    model_path = "model/model.pth"
+    model_path = "model/modelA.pth"
     model = load_model(model_path, num_classes=len(classes))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

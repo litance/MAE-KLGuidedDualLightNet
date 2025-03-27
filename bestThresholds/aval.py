@@ -31,8 +31,8 @@ test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
 num_classes = len(test_dataset.classes)
 
-modelA = load_model("../model/model.pth", num_classes)
-modelB = load_model("../model/model.pth", num_classes)
+modelA = load_model("../model/modelA.pth", num_classes)
+modelB = load_model("../model/modelB.pth", num_classes)
 
 y_true = []
 scores_A = []
