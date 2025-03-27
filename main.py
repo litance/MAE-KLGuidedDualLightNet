@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader, Dataset
 from datetime import datetime
 from PIL import Image
 
+#path = kagglehub.dataset_download("ayuraj/asl-dataset")
 path = "C:\\Users\\User\\PycharmProjects\\signTest\\dataset\\asl_dataset"
 
 log_dir = f"logs/run_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
