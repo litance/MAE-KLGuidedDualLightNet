@@ -16,28 +16,10 @@ x 预测类别
 𝑦
 y 时的准确率满足条件：
 
-Accuracy
-𝐴
-(
-𝑥
-)
->
-𝑎
-and
-Accuracy
-𝐵
-(
-𝑥
-)
->
-𝑏
-Accuracy 
-A
-​
- (x)>aandAccuracy 
-B
-​
- (x)>b
+$$
+\text{Accuracy}_A(x) > a \quad \text{and} \quad \text{Accuracy}_B(x) > b
+$$
+
 若满足该条件，则最终判定 
 𝑥
 =
