@@ -1,11 +1,8 @@
-import os
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 import torchvision.models as models
 import cv2
-import numpy as np
-
 
 class MobileNetLSTMSTAM(nn.Module):
     def __init__(self, num_classes=36):
