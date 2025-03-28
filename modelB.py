@@ -2,54 +2,21 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torchvision.transforms as transforms
+#import torchvision.transforms as transforms
 import time
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader, Dataset
 from datetime import datetime
-from PIL import Image
+from dataload import ASLDataset, transform
+#from PIL import Image
 
-path = "dataset/asl_dataset"
+path = "../dataset/asl_dataset"
 
 log_dir = f"logs/run_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 os.makedirs(log_dir, exist_ok=True)
 writer = SummaryWriter(log_dir=log_dir)
-
-
-class ASLDataset(Dataset):
-    def __init__(self, root, transform=None):
-        self.root = root
-        self.transform = transform
-        self.images = []
-        self.labels = []
-        self.classes = sorted([cls for cls in os.listdir(root) if os.path.isdir(os.path.join(root, cls))])
-        for label, cls in enumerate(self.classes):
-            class_path = os.path.join(root, cls)
-            for img_name in os.listdir(class_path):
-                img_path = os.path.join(class_path, img_name)
-                if os.path.isfile(img_path):
-                    self.images.append(img_path)
-                    self.labels.append(label)
-
-    def __len__(self):
-        return len(self.images)
-
-    def __getitem__(self, idx):
-        img_path = self.images[idx]
-        image = Image.open(img_path).convert('RGB')
-        label = self.labels[idx]
-        if self.transform:
-            image = self.transform(image)
-        return image, label
-
-
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-])
 
 dataset = ASLDataset(path, transform=transform)
 
@@ -127,7 +94,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 if __name__ == "__main__":
     num_epochs = 100
-    batch_size = 128
+    batch_size = 512
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     train_losses, train_accuracies = [], []
 

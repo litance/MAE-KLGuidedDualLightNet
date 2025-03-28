@@ -5,25 +5,30 @@ import json
 from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import label_binarize
 from torch.utils.data import DataLoader
-from modelA import MobileNetLSTMSTAM, ASLDataset, transform
+from dataload import ASLDataset, transform
+from modelA import MobileNetLSTMSTAM
+from modelB import ESNetLSTM
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def load_model(model_path, num_classes):
-    model = MobileNetLSTMSTAM(num_classes).to(device)
-    original_state_dict = torch.load(model_path, map_location=device)
+def load_models(model_configs):
+    models = {}
+    for name, config in model_configs.items():
+        model_class, path, num_classes = config
 
-    model_state_dict = model.state_dict()
-    pretrained_dict = {k: v for k, v in original_state_dict.items()
-                       if k in model_state_dict and model_state_dict[k].shape == v.shape}
+        model = model_class(num_classes).to(device)
 
-    model_state_dict.update(pretrained_dict)
-    model.load_state_dict(model_state_dict)
+        original_state_dict = torch.load(path, map_location=device)
+        model_state_dict = model.state_dict()
+        pretrained_dict = {k: v for k, v in original_state_dict.items()
+                           if k in model_state_dict and model_state_dict[k].shape == v.shape}
 
-    model.eval()
-    return model
-
+        model_state_dict.update(pretrained_dict)
+        model.load_state_dict(model_state_dict)
+        model.eval()
+        models[name] = model
+    return models
 
 test_path = "../dataset/asl_dataset"
 test_dataset = ASLDataset(test_path, transform=transform)
@@ -31,8 +36,16 @@ test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
 num_classes = len(test_dataset.classes)
 
-modelA = load_model("../model/modelA.pth", num_classes)
-modelB = load_model("../model/modelB.pth", num_classes)
+model_configs = {
+    "ModelA": (MobileNetLSTMSTAM, "../model/modelA.pth", num_classes),
+    "ModelB": (ESNetLSTM, "../model/modelB.pth", num_classes),
+}
+
+models = load_models(model_configs)
+
+modelA = models["ModelA"]
+modelB = models["ModelB"]
+
 
 y_true = []
 scores_A = []
