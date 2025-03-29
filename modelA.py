@@ -10,6 +10,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from datetime import datetime
 from dataload import ASLDataset, transform
 #from PIL import Image
@@ -67,7 +68,8 @@ class MobileNetLSTMSTAM(nn.Module):
 device = torch.device("cuda")
 model = MobileNetLSTMSTAM().to(device)
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=1e-4)
+optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
+scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
 
 if __name__ == "__main__":
     num_epochs = 100
@@ -90,6 +92,7 @@ if __name__ == "__main__":
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
+                scheduler.step()
 
                 total_loss += loss.item()
                 avg_loss = total_loss / (tepoch.n + 1)
