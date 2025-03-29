@@ -16,7 +16,7 @@ from dataload import ASLDataset, transform
 #from PIL import Image
 
 #path = kagglehub.dataset_download("ayuraj/asl-dataset")
-path = "../dataset/asl_dataset"
+path = "dataset/asl_dataset"
 
 log_dir = f"logs/run_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 os.makedirs(log_dir, exist_ok=True)
@@ -71,7 +71,7 @@ scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
 
 if __name__ == "__main__":
     num_epochs = 100
-    batch_size = 64
+    batch_size = 256
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     train_losses, train_accuracies = [], []
 

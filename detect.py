@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
-import torchvision.transforms as transforms
+#import torchvision.transforms as transforms
+from torchvision.transforms import ToPILImage
 import torchvision.models as models
 import cv2
+from dataload import transform
 
 class MobileNetLSTMSTAM(nn.Module):
     def __init__(self, num_classes=36):
@@ -47,15 +49,6 @@ def load_classes_from_file(file_path):
     return classes
 
 
-def get_transform():
-    return transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-    ])
-
-
 def detect_sign_language():
     classes = load_classes_from_file('words.txt')
 
@@ -65,17 +58,21 @@ def detect_sign_language():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     cap = cv2.VideoCapture(0)
-    transform = get_transform()
+
+    to_pil = ToPILImage()
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
+        frame = cv2.flip(frame, 1)
+
         cv2.rectangle(frame, (100, 100), (300, 300), (0, 255, 0), 2)
 
         roi = frame[100:300, 100:300]
-        roi_tensor = transform(roi).unsqueeze(0).to(device)
+        roi_pil = to_pil(roi)
+        roi_tensor = transform(roi_pil).unsqueeze(0).to(device)
 
         with torch.no_grad():
             outputs = model(roi_tensor)

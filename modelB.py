@@ -12,7 +12,7 @@ from datetime import datetime
 from dataload import ASLDataset, transform
 #from PIL import Image
 
-path = "../dataset/asl_dataset"
+path = "dataset/asl_dataset"
 
 log_dir = f"logs/run_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 os.makedirs(log_dir, exist_ok=True)

@@ -30,7 +30,7 @@ def load_models(model_configs):
         models[name] = model
     return models
 
-test_path = "../dataset/asl_dataset"
+test_path = "../dataset/test_dataset/asl_dataset"
 test_dataset = ASLDataset(test_path, transform=transform)
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
