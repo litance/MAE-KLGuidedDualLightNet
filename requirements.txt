@@ -6,3 +6,4 @@ tensorboard
 kagglehub
 opencv-python
 scikit-learn
+mediapipe

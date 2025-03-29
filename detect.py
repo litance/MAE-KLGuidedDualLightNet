@@ -9,7 +9,7 @@ from dataload import transform
 class MobileNetLSTMSTAM(nn.Module):
     def __init__(self, num_classes=36):
         super(MobileNetLSTMSTAM, self).__init__()
-        self.mobilenet = models.mobilenet_v2(pretrained=True)
+        self.mobilenet = models.mobilenet_v3(pretrained=True)
         self.mobilenet.features[18] = nn.Identity()
         self.lstm = nn.LSTM(320, 512, batch_first=True)
         self.fc = nn.Linear(512, num_classes)
