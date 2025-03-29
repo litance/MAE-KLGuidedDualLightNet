@@ -16,7 +16,7 @@ from dataload import ASLDataset, transform
 #from PIL import Image
 
 #path = kagglehub.dataset_download("ayuraj/asl-dataset")
-path = "dataset/asl_dataset"
+path = "../dataset/asl_dataset"
 
 log_dir = f"logs/run_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 os.makedirs(log_dir, exist_ok=True)
@@ -46,22 +46,20 @@ class SEBlock(nn.Module):
 class MobileNetLSTMSTAM(nn.Module):
     def __init__(self, num_classes=len(dataset.classes)):
         super(MobileNetLSTMSTAM, self).__init__()
-        self.mobilenet = models.mobilenet_v2(pretrained=True)
-        self.mobilenet.features[18] = nn.Identity()
-        self.stam = SEBlock(320)
-        self.lstm = nn.LSTM(320, 512, batch_first=True)
+        self.mobilenet = models.mobilenet_v3_large(pretrained=True)
+        self.mobilenet.features[-1] = nn.Identity()
+        self.stam = SEBlock(160)
+        self.lstm = nn.LSTM(160, 512, batch_first=True)
         self.fc = nn.Linear(512, num_classes)
+        self.dropout = nn.Dropout(0.5)
 
     def forward(self, x):
-        batch_size, C, H, W = x.shape
-        self.dropout = nn.Dropout(0.5)
         x = self.mobilenet.features(x)
         x = self.stam(x)
         x = x.mean([2, 3])
-        x = x.view(batch_size, 1, -1)
+        x = x.unsqueeze(1)
         x, _ = self.lstm(x)
-        x = self.fc(x[:, -1, :])
-        x = self.dropout(x)
+        x = self.fc(self.dropout(x[:, -1, :]))
         return x
 
 
@@ -73,7 +71,7 @@ scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
 
 if __name__ == "__main__":
     num_epochs = 100
-    batch_size = 128
+    batch_size = 64
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     train_losses, train_accuracies = [], []
 
