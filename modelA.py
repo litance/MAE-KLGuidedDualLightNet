@@ -16,7 +16,7 @@ from dataload import ASLDataset, transform
 #from PIL import Image
 
 #path = kagglehub.dataset_download("ayuraj/asl-dataset")
-path = "../dataset/test_dataset/asl_dataset"
+path = "dataset/test_dataset/asl_dataset"
 
 log_dir = f"logs/run_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 os.makedirs(log_dir, exist_ok=True)
@@ -128,18 +128,18 @@ if __name__ == "__main__":
 
         writer.close()
 
-plt.figure(figsize=(10, 5))
-plt.plot(range(1, len(train_losses) + 1), train_losses, marker='o', label="Training Loss")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.title("Training Loss Curve")
-plt.legend()
-plt.show()
+        plt.figure(figsize=(10, 5))
+        plt.plot(range(1, len(train_losses) + 1), train_losses, marker='o', label="Training Loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title("Training Loss Curve")
+        plt.legend()
+        plt.show()
 
-plt.figure(figsize=(10, 5))
-plt.plot(range(1, len(train_accuracies) + 1), train_accuracies, marker='o', label="Training Accuracy")
-plt.xlabel("Epoch")
-plt.ylabel("Accuracy")
-plt.title("Training Accuracy Curve")
-plt.legend()
-plt.show()
+        plt.figure(figsize=(10, 5))
+        plt.plot(range(1, len(train_accuracies) + 1), train_accuracies, marker='o', label="Training Accuracy")
+        plt.xlabel("Epoch")
+        plt.ylabel("Accuracy")
+        plt.title("Training Accuracy Curve")
+        plt.legend()
+        plt.show()
