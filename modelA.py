@@ -1,7 +1,7 @@
 import os
 import torch
 import torch.nn as nn
-import torch.optim as optim
+#import torch.optim as optim
 #import torchvision.transforms as transforms
 import torchvision.models as models
 #import kagglehub
@@ -16,7 +16,7 @@ from dataload import ASLDataset, transform
 #from PIL import Image
 
 #path = kagglehub.dataset_download("ayuraj/asl-dataset")
-path = "dataset/asl_dataset"
+path = "../dataset/test_dataset/asl_dataset"
 
 log_dir = f"logs/run_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 os.makedirs(log_dir, exist_ok=True)
@@ -71,7 +71,7 @@ scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
 
 if __name__ == "__main__":
     num_epochs = 100
-    batch_size = 256
+    batch_size = 128
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     train_losses, train_accuracies = [], []
 
@@ -124,22 +124,22 @@ if __name__ == "__main__":
         torch.save({
             'model_state_dict': model.state_dict(),
             'num_classes': len(dataset.classes)
-        }, "model/model.pth")
+        }, "model/modelA.pth")
 
         writer.close()
 
-        plt.figure(figsize=(10, 5))
-        plt.plot(range(1, len(train_losses) + 1), train_losses, marker='o', label="Training Loss")
-        plt.xlabel("Epoch")
-        plt.ylabel("Loss")
-        plt.title("Training Loss Curve")
-        plt.legend()
-        plt.show()
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, len(train_losses) + 1), train_losses, marker='o', label="Training Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Training Loss Curve")
+plt.legend()
+plt.show()
 
-        plt.figure(figsize=(10, 5))
-        plt.plot(range(1, len(train_accuracies) + 1), train_accuracies, marker='o', label="Training Accuracy")
-        plt.xlabel("Epoch")
-        plt.ylabel("Accuracy")
-        plt.title("Training Accuracy Curve")
-        plt.legend()
-        plt.show()
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, len(train_accuracies) + 1), train_accuracies, marker='o', label="Training Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.title("Training Accuracy Curve")
+plt.legend()
+plt.show()

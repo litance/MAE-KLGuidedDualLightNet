@@ -45,7 +45,7 @@ def load_classes_from_file(file_path):
 
 def detect_sign_language():
     classes = load_classes_from_file('words.txt')
-    model_path = "model/modelB.pth"
+    model_path = "model/modelC.pth"
     model = load_model(model_path, num_classes=len(classes))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
