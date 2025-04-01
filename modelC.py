@@ -1,9 +1,9 @@
 import os
 import torch
 import torch.nn as nn
+import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
-import torchvision.models as models
 import time
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -14,31 +14,28 @@ from datetime import datetime
 
 torch.manual_seed(42)
 
-train_transform = transforms.Compose([
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomCrop(32, padding=4),
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-])
-
-test_transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-])
-
 
 def load_datasets():
     print("Loading CIFAR-10 datasets...")
-    full_train_dataset = torchvision.datasets.CIFAR10(
+
+    train_transform = transforms.Compose([
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomCrop(32, padding=4),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    ])
+
+    test_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    ])
+
+    train_dataset = torchvision.datasets.CIFAR10(
         root='./data',
         train=True,
         download=True,
         transform=train_transform
     )
-
-    train_size = int(0.8 * len(full_train_dataset))
-    val_size = len(full_train_dataset) - train_size
-    train_dataset, val_dataset = random_split(full_train_dataset, [train_size, val_size])
 
     test_dataset = torchvision.datasets.CIFAR10(
         root='./data',
@@ -47,7 +44,16 @@ def load_datasets():
         transform=test_transform
     )
 
+    train_size = int(0.8 * len(train_dataset))
+    val_size = len(train_dataset) - train_size
+    train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size])
+
     return train_dataset, val_dataset, test_dataset
+
+
+log_dir = f"logs/run_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+os.makedirs(log_dir, exist_ok=True)
+writer = SummaryWriter(log_dir=log_dir)
 
 
 class SEBlock(nn.Module):
@@ -67,23 +73,25 @@ class SEBlock(nn.Module):
         y = y.view(batch, channels, 1, 1)
         return x * y
 
-def create_model(num_classes=10):
-    print("Creating model...")
-    weights = models.MobileNet_V3_Large_Weights.IMAGENET1K_V1
-    mobilenet = models.mobilenet_v3_large(weights=weights)
 
-    mobilenet.features[0][0] = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
-    mobilenet.features[-1] = nn.Identity()
+class MobileNetLSTMSTAM(nn.Module):
+    def __init__(self, num_classes=10):
+        super(MobileNetLSTMSTAM, self).__init__()
+        self.mobilenet = torchvision.models.mobilenet_v3_large(pretrained=True)
+        self.mobilenet.features[-1] = nn.Identity()
+        self.stam = SEBlock(160)
+        self.lstm = nn.LSTM(160, 512, batch_first=True)
+        self.fc = nn.Linear(512, num_classes)
+        self.dropout = nn.Dropout(0.5)
 
-    model = nn.Sequential(
-        mobilenet.features,
-        SEBlock(160),
-        nn.AdaptiveAvgPool2d(1),
-        nn.Flatten(),
-        nn.Linear(160, num_classes)
-    )
-
-    return model
+    def forward(self, x):
+        x = self.mobilenet.features(x)
+        x = self.stam(x)
+        x = x.mean([2, 3])
+        x = x.unsqueeze(1)
+        x, _ = self.lstm(x)
+        x = self.fc(self.dropout(x[:, -1, :]))
+        return x
 
 
 def evaluate(model, dataloader, criterion, device):
@@ -119,14 +127,10 @@ def main():
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
-    model = create_model().to(device)
+    model = MobileNetLSTMSTAM(num_classes=10).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
     scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
-
-    log_dir = f"logs/run_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-    os.makedirs(log_dir, exist_ok=True)
-    writer = SummaryWriter(log_dir=log_dir)
 
     num_epochs = 100
     best_val_accuracy = 0.0
@@ -156,10 +160,8 @@ def main():
                 correct += (predicted == labels).sum().item()
                 total += labels.size(0)
 
-                avg_loss = total_loss / (tepoch.n + 1)
-                accuracy = correct / total
-
-                tepoch.set_postfix(loss=f"{avg_loss:.4f}", acc=f"{accuracy:.4f}")
+                tepoch.set_postfix(loss=f"{total_loss / (tepoch.n + 1):.4f}",
+                                   acc=f"{correct / total:.4f}")
 
         train_avg_loss = total_loss / len(train_loader)
         train_accuracy = correct / total
@@ -175,6 +177,16 @@ def main():
         writer.add_scalar("Loss/val", val_loss, epoch)
         writer.add_scalar("Accuracy/val", val_accuracy, epoch)
 
+        epoch_end = time.time()
+        elapsed_time = epoch_end - epoch_start
+
+        current_lr = optimizer.param_groups[0]['lr']
+        print(f"\nEpoch {epoch + 1}/{num_epochs} | "
+              f"Train Loss: {train_avg_loss:.4f} | Train Acc: {train_accuracy:.4f} | "
+              f"Val Loss: {val_loss:.4f} | Val Acc: {val_accuracy:.4f} | "
+              f"LR: {current_lr:.6f} | "
+              f"Time: {elapsed_time:.2f}s\n")
+
         if val_accuracy > best_val_accuracy:
             best_val_accuracy = val_accuracy
             torch.save({
@@ -184,16 +196,7 @@ def main():
             }, "model/modelC.pth")
             print(f"New best model saved with val accuracy: {val_accuracy:.4f}")
 
-        epoch_end = time.time()
-        elapsed_time = epoch_end - epoch_start
-        current_lr = optimizer.param_groups[0]['lr']
-
-        print(f"\nEpoch {epoch + 1}/{num_epochs} | "
-              f"Train Loss: {train_avg_loss:.4f} | Train Acc: {train_accuracy:.4f} | "
-              f"Val Loss: {val_loss:.4f} | Val Acc: {val_accuracy:.4f} | "
-              f"LR: {current_lr:.6f} | Time: {elapsed_time:.2f}s\n")
-
-        if train_accuracy > 0.99:
+        if train_accuracy > 0.80:
             print("Training accuracy reached 99%, stopping early.")
             break
 

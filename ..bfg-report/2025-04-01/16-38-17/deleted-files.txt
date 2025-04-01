@@ -1,0 +1,2 @@
+90c5365492dea3b3c855b2375f1de8588ac1bda4 170498071 cifar-10-python.tar.gz
+3026cc501ad5b158f4de147d06c95ebbc112ea48 134 cifar-10-python.tar.gz
