@@ -7,8 +7,8 @@ from sklearn.preprocessing import label_binarize
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-from modelC import MobileNetLSTMSTAM
-from modelD import LightCNN_LSTM_STAM
+from modelA import MobileNetLSTMSTAM
+from modelB import LightCNN_LSTM_STAM
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
