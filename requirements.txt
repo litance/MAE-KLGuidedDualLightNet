@@ -10,3 +10,4 @@ kagglehub==0.3.10
 opencv-python==4.11.0.86
 scikit-learn==1.6.1
 mediapipe==0.10.21
+fvcore

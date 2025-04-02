@@ -5,6 +5,8 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import time
+
+from sympy import false
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
@@ -82,7 +84,7 @@ class MobileNetLSTMSTAM(nn.Module):
         self.stam = SEBlock(160)
         self.lstm = nn.LSTM(160, 512, batch_first=True)
         self.fc = nn.Linear(512, num_classes)
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.7)
 
     def forward(self, x):
         x = self.mobilenet.features(x)
@@ -122,14 +124,14 @@ def main():
 
     train_dataset, val_dataset, test_dataset = load_datasets()
 
-    batch_size = 128
+    batch_size = 256
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
     model = MobileNetLSTMSTAM(num_classes=10).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
     scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
 
     num_epochs = 100
@@ -196,7 +198,7 @@ def main():
             }, "model/modelC.pth")
             print(f"New best model saved with val accuracy: {val_accuracy:.4f}")
 
-        if train_accuracy > 0.80:
+        if train_accuracy > 0.99:
             print("Training accuracy reached 99%, stopping early.")
             break
 
