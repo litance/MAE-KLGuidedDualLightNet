@@ -193,7 +193,7 @@ class CIFAR10ClassifierApp:
         os.makedirs("datasets/temp", exist_ok=True)
 
         # Default dataset paths
-        self.main_dataset_path = "datasets/main/cifar-10-batches-py"
+        self.main_dataset_path = "../datasets/main/cifar-10-batches-py"
         self.temp_dataset_path = "datasets/temp"
 
         # Load classes
