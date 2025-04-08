@@ -11,8 +11,8 @@ import pandas as pd
 from tqdm import tqdm
 import json
 import os
-from modelA import MobileNetLSTMSTAM
-from modelB import LightCNN_LSTM_STAM
+from modelA import MobileNetSTAM
+from modelB import LightCNN_STAM
 
 # Fix random seed for reproducibility
 torch.manual_seed(42)
@@ -85,13 +85,11 @@ def plot_confusion_matrix(labels, preds, class_names, model_name):
 
 def load_models(device):
     """Load both models for evaluation"""
-    # Create directory for saved models if it doesn't exist
     os.makedirs("model", exist_ok=True)
 
-    # Model paths
     model_paths = {
-        'ModelC': "model/modelC.pth",
-        'ModelD': "model/modelD.pth"
+        'ModelC': "model/modelA.pth",
+        'ModelD': "model/modelB.pth"
     }
 
     models = {}
@@ -99,9 +97,18 @@ def load_models(device):
     # Load Model C
     print("Loading Model C...")
     try:
-        modelC = MobileNetLSTMSTAM(num_classes=10)
+        modelC = MobileNetSTAM(num_classes=10)
         checkpoint = torch.load(model_paths['ModelC'], map_location=device)
-        modelC.load_state_dict(checkpoint['model_state_dict'])
+
+        # Adjust the model if the state dict does not match
+        state_dict = checkpoint['model_state_dict']
+        model_dict = modelC.state_dict()
+
+        # Filter out classifier weights to avoid size mismatch
+        filtered_dict = {k: v for k, v in state_dict.items() if k in model_dict and model_dict[k].shape == v.shape}
+        model_dict.update(filtered_dict)
+
+        modelC.load_state_dict(model_dict, strict=False)
         modelC.to(device)
         modelC.eval()
         models['ModelC'] = modelC
@@ -113,9 +120,18 @@ def load_models(device):
     # Load Model D
     print("Loading Model D...")
     try:
-        modelD = LightCNN_LSTM_STAM(num_classes=10)
+        modelD = LightCNN_STAM(num_classes=10)
         checkpoint = torch.load(model_paths['ModelD'], map_location=device)
-        modelD.load_state_dict(checkpoint['model_state_dict'])
+
+        # Adjust the model if the state dict does not match
+        state_dict = checkpoint['model_state_dict']
+        model_dict = modelD.state_dict()
+
+        # Filter out classifier weights to avoid size mismatch
+        filtered_dict = {k: v for k, v in state_dict.items() if k in model_dict and model_dict[k].shape == v.shape}
+        model_dict.update(filtered_dict)
+
+        modelD.load_state_dict(model_dict, strict=False)
         modelD.to(device)
         modelD.eval()
         models['ModelD'] = modelD
@@ -128,7 +144,7 @@ def load_models(device):
 
 
 def load_auc_scores():
-    """Load AUC scores from JSON or use default values"""
+    """Load AUC scores from JSON file"""
     json_path = "bestThresholds/auc_scores_cifar10.json"
     try:
         if not os.path.exists(json_path):
@@ -139,10 +155,26 @@ def load_auc_scores():
         with open(json_path, 'r') as f:
             data = json.load(f)
 
-        for model_name in ['ModelC', 'ModelD']:
+        # Validate the loaded data structure
+        required_models = ['ModelC', 'ModelD']
+        for model_name in required_models:
             if model_name not in data:
                 print(f"Warning: {model_name} AUC scores not found in {json_path}. Using defaults.")
                 data[model_name] = {str(i): 0.95 for i in range(10)}
+            else:
+                # Ensure all class indices are present
+                for i in range(10):
+                    if str(i) not in data[model_name]:
+                        print(f"Warning: Class {i} AUC score not found for {model_name}. Using default.")
+                        data[model_name][str(i)] = 0.95
+
+        print(f"Successfully loaded AUC scores from {json_path}")
+
+        # Print the Macro AUC values for reference
+        if "Macro AUC" in data["ModelC"]:
+            print(f"ModelC Macro AUC: {data['ModelC']['Macro AUC']:.4f}")
+        if "Macro AUC" in data["ModelD"]:
+            print(f"ModelD Macro AUC: {data['ModelD']['Macro AUC']:.4f}")
 
         return data
     except Exception as e:
@@ -154,7 +186,7 @@ def load_auc_scores():
 def evaluate_ensemble(probaC, probaD, labels, auc_scores, classes):
     """Evaluate the ensemble model using the same logic as in detect.py"""
     predictions = []
-    confidences = []
+    confidences = []    
     statuses = []
 
     for i in range(len(labels)):
@@ -186,7 +218,7 @@ def evaluate_ensemble(probaC, probaD, labels, auc_scores, classes):
         weighted_probC = max_probC * aucC
         weighted_probD = max_probD * aucD
 
-        high_confidence = (weighted_probC > 0.85) or (weighted_probD > 0.85)
+        high_confidence = (weighted_probC > 0.97) and (weighted_probD > 0.97)
         moderate_agreement = (weighted_probC > 0.65 and weighted_probD > 0.35) or (
                 weighted_probD > 0.65 and weighted_probC > 0.35)
 

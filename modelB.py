@@ -158,19 +158,19 @@ class LightweightCNN(nn.Module):
         return x
 
 
-class LightCNN_LSTM_STAM(nn.Module):
+class LightCNN_STAM(nn.Module):
     def __init__(self, num_classes=10):
-        super(LightCNN_LSTM_STAM, self).__init__()
+        super(LightCNN_STAM, self).__init__()
 
         self.cnn = LightweightCNN(input_channels=3, base_channels=32)
         feature_dim = self.cnn.output_channels
 
-        self.lstm = nn.LSTM(feature_dim, 512, batch_first=True)
+        # Removed LSTM
 
         self.final_stam = STAMBlock(feature_dim)
 
         self.dropout = nn.Dropout(0.5)
-        self.fc = nn.Linear(512, num_classes)
+        self.fc = nn.Linear(feature_dim, num_classes)  # Changed from 512 to feature_dim
 
     def forward(self, x):
         batch_size = x.size(0)
@@ -179,14 +179,11 @@ class LightCNN_LSTM_STAM(nn.Module):
 
         x = self.final_stam(x)
 
-        x = x.mean([2, 3])
+        x = x.mean([2, 3])  # Global average pooling
 
-        x = x.unsqueeze(1)
+        # Removed LSTM processing
 
-        x, _ = self.lstm(x)
-
-        x = x[:, -1, :]
-
+        # Direct connection to FC layer
         x = self.fc(self.dropout(x))
 
         return x
@@ -225,12 +222,12 @@ def main():
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
-    model = LightCNN_LSTM_STAM(num_classes=10).to(device)
+    model = LightCNN_STAM(num_classes=10).to(device)  # Updated class name
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.001, weight_decay=1e-4)
     scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
 
-    num_epochs = 100
+    num_epochs = 50
     best_val_accuracy = 0.0
     train_losses, train_accuracies = [], []
     val_losses, val_accuracies = [], []
@@ -296,11 +293,12 @@ def main():
                 'model_state_dict': model.state_dict(),
                 'epoch': epoch,
                 'val_accuracy': val_accuracy
-            }, "model/modelD.pth")
+            }, "model/modelB.pth")
             print(f"New best model saved with val accuracy: {val_accuracy:.4f}")
 
         if train_accuracy > 0.8:
-            print("Training accuracy reached 99%, stopping early.")
+            print(
+                "Training accuracy reached 80%, stopping early.")  # Changed from 99% to 80% to match your original code
             break
 
     test_loss, test_accuracy = evaluate(model, test_loader, criterion, device)

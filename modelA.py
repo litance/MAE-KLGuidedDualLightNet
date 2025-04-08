@@ -73,23 +73,22 @@ class SEBlock(nn.Module):
         return x * y
 
 
-class MobileNetLSTMSTAM(nn.Module):
+class MobileNetSTAM(nn.Module):
     def __init__(self, num_classes=10):
-        super(MobileNetLSTMSTAM, self).__init__()
+        super(MobileNetSTAM, self).__init__()
         self.mobilenet = torchvision.models.mobilenet_v3_large(pretrained=True)
         self.mobilenet.features[-1] = nn.Identity()
         self.stam = SEBlock(160)
-        self.lstm = nn.LSTM(160, 512, batch_first=True)
-        self.fc = nn.Linear(512, num_classes)
+        # Removed LSTM layer
+        self.fc = nn.Linear(160, num_classes)  # Changed input size from 512 to 160
         self.dropout = nn.Dropout(0.7)
 
     def forward(self, x):
         x = self.mobilenet.features(x)
         x = self.stam(x)
-        x = x.mean([2, 3])
-        x = x.unsqueeze(1)
-        x, _ = self.lstm(x)
-        x = self.fc(self.dropout(x[:, -1, :]))
+        x = x.mean([2, 3])  # Global average pooling
+        # Removed LSTM processing
+        x = self.fc(self.dropout(x))  # Directly use the features after STAM
         return x
 
 
@@ -126,12 +125,12 @@ def main():
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
-    model = MobileNetLSTMSTAM(num_classes=10).to(device)
+    model = MobileNetSTAM(num_classes=10).to(device)  # Updated class name
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
     scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
 
-    num_epochs = 100
+    num_epochs = 50
     best_val_accuracy = 0.0
     train_losses, train_accuracies = [], []
     val_losses, val_accuracies = [], []
@@ -192,7 +191,7 @@ def main():
                 'model_state_dict': model.state_dict(),
                 'epoch': epoch,
                 'val_accuracy': val_accuracy
-            }, "model/modelC.pth")
+            }, "model/modelA.pth")
             print(f"New best model saved with val accuracy: {val_accuracy:.4f}")
 
         if train_accuracy > 0.99:
